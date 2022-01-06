@@ -124,29 +124,33 @@ func Deduplicate(in []string) []string {
  */
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Printf("Usage: %s <q2mapfile.bsp>\n", os.Args[0])
+		fmt.Printf("Usage: %s <q2map.bsp> [q2map.bsp...]\n", os.Args[0])
 		return
 	}
 
-	bspname := os.Args[1]
-	bsp, err := os.Open(bspname)
-	check(err)
+	textures := []string{}
 
-	header := make([]byte, HeaderLen)
-	_, err = bsp.Read(header)
-	check(err)
+	for _, bspname := range os.Args[1:] {
+		bsp, err := os.Open(bspname)
+		check(err)
 
-	VerifyHeader(header)
+		header := make([]byte, HeaderLen)
+		_, err = bsp.Read(header)
+		check(err)
 
-	offset, length := LocateTextureLump(header)
-	texturelump := GetTextureLump(bsp, offset, length)
+		VerifyHeader(header)
 
-	textures := Deduplicate(GetTextures(texturelump))
-	sort.Strings(textures)
+		offset, length := LocateTextureLump(header)
+		texturelump := GetTextureLump(bsp, offset, length)
+		textures = append(textures, GetTextures(texturelump)...)
 
-	for _, t := range textures {
-		fmt.Println(t)
+		bsp.Close()
 	}
 
-	bsp.Close()
+	dedupedtextures := Deduplicate(textures)
+	sort.Strings(dedupedtextures)
+
+	for _, t := range dedupedtextures {
+		fmt.Println(t)
+	}
 }
