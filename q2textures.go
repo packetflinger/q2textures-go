@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 )
 
 const (
@@ -151,6 +152,6 @@ func main() {
 	sort.Strings(dedupedtextures)
 
 	for _, t := range dedupedtextures {
-		fmt.Println(t)
+		fmt.Println(strings.Trim(t, "\x00"))
 	}
 }
