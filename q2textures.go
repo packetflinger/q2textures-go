@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"sort"
 	"strings"
@@ -14,6 +15,8 @@ import (
 var (
 	checkMissing = flag.Bool("check_missing", false, "Find missing textures")
 	sourceDir    = flag.String("source", "", "Root director of our textures")
+	source       = &os.File{}
+	sourceFiles  = []fs.DirEntry{}
 )
 
 // Remove any duplipcates
@@ -45,7 +48,7 @@ func main() {
 
 	allTextures := []string{}
 
-	for _, bspname := range os.Args[1:] {
+	for _, bspname := range flag.Args() {
 		bspfile, err := bsp.OpenBSPFile(bspname)
 		if err != nil {
 			fmt.Println(err)
@@ -66,6 +69,12 @@ func main() {
 	for _, t := range dedupedtextures {
 		fmt.Println(t)
 	}
+
+	if len(sourceFiles) > 0 {
+		for _, sf := range sourceFiles {
+			fmt.Println(sf.Name())
+		}
+	}
 }
 
 // Make sure all the args we need are specified. Some are dependent on others.
@@ -74,5 +83,23 @@ func argsOkay() (bool, error) {
 	if *checkMissing && len(*sourceDir) == 0 {
 		return false, errors.New("source flag required in check_missing mode")
 	}
+
+	// if --source flag provided, check folder actually exists
+	if len(*sourceDir) > 0 {
+		src, err := os.Open(*sourceDir)
+		if err != nil {
+			return false, err
+		}
+
+		sourceFiles, err = src.ReadDir(-1)
+		if err != nil {
+			return false, err
+		}
+		if len(sourceFiles) == 0 {
+			return false, errors.New("source directory contains no files")
+		}
+		source = src
+	}
+
 	return true, nil
 }
