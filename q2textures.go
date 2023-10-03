@@ -16,18 +16,14 @@ const (
 	TextureLen  = 76  // 40 bytes of origins and angles + 36 for textname
 )
 
-/**
- * Just simple error checking
- */
+// Just simple error checking
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
-/**
- * Read 4 bytes as a Long
- */
+// Read 4 bytes as a Long
 func ReadLong(input []byte, start int) int32 {
 	var tmp struct {
 		Value int32
@@ -40,19 +36,15 @@ func ReadLong(input []byte, start int) int32 {
 	return tmp.Value
 }
 
-/**
- * Make sure the first 4 bytes match the magic number
- */
+// Make sure the first 4 bytes match the magic number
 func VerifyHeader(header []byte) {
 	if ReadLong(header, 0) != Magic {
 		panic("Invalid BPS file")
 	}
 }
 
-/**
- * Find the offset and the length of the texture lump
- * in the BSP file
- */
+// Find the offset and the length of the texture lump
+// in the BSP file
 func LocateTextureLump(header []byte) (int, int) {
 	var offsets [19]int
 	var lengths [19]int
@@ -68,9 +60,7 @@ func LocateTextureLump(header []byte) (int, int) {
 	return offsets[TextureLump] + HeaderLen, lengths[TextureLump]
 }
 
-/**
- * Get a slice of the just the texture lump from the map file
- */
+// Get a slice of the just the texture lump from the map file
 func GetTextureLump(f *os.File, offset int, length int) []byte {
 	_, err := f.Seek(int64(offset), 0)
 	check(err)
@@ -86,10 +76,8 @@ func GetTextureLump(f *os.File, offset int, length int) []byte {
 	return lump
 }
 
-/**
- * Loop through all the textures in the lump building a
- * slice of just the texture names
- */
+// Loop through all the textures in the lump building a
+// slice of just the texture names
 func GetTextures(lump []byte) []string {
 	size := len(lump) / TextureLen
 	var textures []string
@@ -104,9 +92,7 @@ func GetTextures(lump []byte) []string {
 	return textures
 }
 
-/**
- * Remove any duplipcates
- */
+// Remove any duplipcates
 func Deduplicate(in []string) []string {
 	keys := make(map[string]bool)
 	list := []string{}
@@ -120,9 +106,6 @@ func Deduplicate(in []string) []string {
 	return list
 }
 
-/**
- *
- */
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Printf("Usage: %s <q2map.bsp> [q2map.bsp...]\n", os.Args[0])
