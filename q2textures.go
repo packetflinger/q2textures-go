@@ -1,12 +1,19 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/packetflinger/libq2/bsp"
+)
+
+var (
+	checkMissing = flag.Bool("check_missing", false, "Find missing textures")
+	sourceDir    = flag.String("source", "", "Root director of our textures")
 )
 
 // Remove any duplipcates
@@ -25,7 +32,14 @@ func Deduplicate(in []string) []string {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Printf("Usage: %s <q2map.bsp> [q2map.bsp...]\n", os.Args[0])
+		fmt.Printf("Usage: %s [flags] <q2map.bsp> [q2map.bsp...]\n", os.Args[0])
+		flag.PrintDefaults()
+		return
+	}
+	flag.Parse()
+
+	if ok, err := argsOkay(); !ok {
+		fmt.Println(err)
 		return
 	}
 
@@ -52,4 +66,13 @@ func main() {
 	for _, t := range dedupedtextures {
 		fmt.Println(t)
 	}
+}
+
+// Make sure all the args we need are specified. Some are dependent on others.
+// Returns true if args are okay
+func argsOkay() (bool, error) {
+	if *checkMissing && len(*sourceDir) == 0 {
+		return false, errors.New("source flag required in check_missing mode")
+	}
+	return true, nil
 }
