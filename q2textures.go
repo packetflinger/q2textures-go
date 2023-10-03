@@ -40,7 +40,8 @@ func main() {
 
 		textures := bspfile.FetchTextures()
 		for _, t := range textures {
-			allTextures = append(allTextures, t.File)
+			// all names are still padded with nulls, strip those away
+			allTextures = append(allTextures, strings.Trim(t.File, "\x00"))
 		}
 		bspfile.Close()
 	}
@@ -49,6 +50,6 @@ func main() {
 	sort.Strings(dedupedtextures)
 
 	for _, t := range dedupedtextures {
-		fmt.Println(strings.Trim(t, "\x00"))
+		fmt.Println(t)
 	}
 }
