@@ -4,8 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/fs"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -13,10 +13,10 @@ import (
 )
 
 var (
+	list         = flag.Bool("list", true, "Output textures found in maps")
 	checkMissing = flag.Bool("check_missing", false, "Find missing textures")
 	sourceDir    = flag.String("source", "", "Root director of our textures")
-	source       = &os.File{}
-	sourceFiles  = []fs.DirEntry{}
+	sourceFiles  = []string{}
 )
 
 // Remove any duplipcates
@@ -66,13 +66,16 @@ func main() {
 	dedupedtextures := Deduplicate(allTextures)
 	sort.Strings(dedupedtextures)
 
-	for _, t := range dedupedtextures {
-		fmt.Println(t)
+	if *list {
+		for _, t := range dedupedtextures {
+			fmt.Println(t)
+		}
 	}
 
-	if len(sourceFiles) > 0 {
-		for _, sf := range sourceFiles {
-			fmt.Println(sf.Name())
+	if *checkMissing {
+		missing := findMissing(dedupedtextures, sourceFiles)
+		for _, t := range missing {
+			fmt.Println(t)
 		}
 	}
 }
@@ -84,22 +87,66 @@ func argsOkay() (bool, error) {
 		return false, errors.New("source flag required in check_missing mode")
 	}
 
+	// only do one
+	if *checkMissing && *list {
+		*list = false
+	}
+
 	// if --source flag provided, check folder actually exists
 	if len(*sourceDir) > 0 {
 		src, err := os.Open(*sourceDir)
 		if err != nil {
 			return false, err
 		}
+		defer src.Close()
 
-		sourceFiles, err = src.ReadDir(-1)
+		err = filepath.Walk(*sourceDir,
+			func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				sourceFiles = append(sourceFiles, path)
+
+				return nil
+			},
+		)
 		if err != nil {
+			fmt.Println(err)
 			return false, err
 		}
+
 		if len(sourceFiles) == 0 {
 			return false, errors.New("source directory contains no files")
 		}
-		source = src
 	}
 
 	return true, nil
+}
+
+// Find any textures that exist in the map file that are not in the source
+// directory.
+//
+// Keep in mind, textures listed in the map don't have extensions, so
+// we need to match them as a prefix.
+func findMissing(bspTextures []string, diskTextures []string) []string {
+	found := make(map[string]bool)
+	for _, t := range bspTextures {
+		found[t] = false
+	}
+
+	for _, bt := range bspTextures {
+		for _, dt := range diskTextures {
+			if strings.Contains(dt, bt+".") {
+				found[bt] = true
+			}
+		}
+	}
+
+	var missing []string
+	for k, v := range found {
+		if !v {
+			missing = append(missing, k)
+		}
+	}
+	return missing
 }
